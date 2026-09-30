@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sandfall Lab v2 media capture</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#0b0d14;color:#edf0f6;font:14px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{width:min(96vw,1280px)}canvas{width:100%;height:auto;border:1px solid #282d39;border-radius:10px;display:block}footer{display:flex;align-items:center;gap:14px;padding:12px 2px;color:#9ba3b1}button{background:#c9f36a;border:0;border-radius:6px;padding:10px 16px;font-weight:800;color:#171d0e;cursor:pointer}#status{font:12px ui-monospace,monospace}
+</style>
+<main>
+  <canvas id="preview" width="1280" height="720" aria-label="Sandfall Lab animated preview"></canvas>
+  <footer><button id="record">Record README media</button><span id="status">Three preview images and a WebM video will be saved into media/.</span></footer>
+</main>
+<script>
+(() => {
+  const canvas=document.querySelector('#preview'),ctx=canvas.getContext('2d'),status=document.querySelector('#status');
+  const colors={bg:'#0b0d14',panel:'#121620',line:'#262c39',muted:'#7e8797',text:'#edf0f6',lime:'#c9f36a',sand:'#e9ca83',water:'#54b8e8',lava:'#ff613e',copper:'#d18b65'};
+  const W=canvas.width,H=canvas.height, saved=new Set();let startTime=performance.now(),recording=false,recorder=null,chunks=[];
+  const rand=(n)=>Math.random()*n;
+  function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}}
+  function text(s,x,y,size=13,color=colors.text,weight=500){ctx.fillStyle=color;ctx.font=`${weight} ${size}px system-ui,sans-serif`;ctx.fillText(s,x,y)}
+  function glow(x,y,r,color,alpha){ctx.save();ctx.globalAlpha=alpha;ctx.shadowBlur=r*2;ctx.shadowColor=color;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore()}
+  function drawShell(stage,t){
+    ctx.fillStyle=colors.bg;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#0d1018';ctx.fillRect(0,0,W,58);ctx.strokeStyle='#222735';ctx.beginPath();ctx.moveTo(0,58);ctx.lineTo(W,58);ctx.stroke();
+    text('◈',24,37,24,colors.lime,700);text('SANDFALL LAB v2',58,35,17,colors.text,800);text('MATTER PLAYGROUND',245,34,10,colors.muted,500);
+    glow(1030,29,4,colors.lime,.7);text('SIMULATION LIVE',1045,33,10,'#a8b1bf',600);roundRect(1153,15,104,29,5,colors.lime);text('SAVE WORLD',1168,34,10,'#171d0e',800);
+    roundRect(18,76,226,626,9,colors.panel,colors.line);text('YOUR ELEMENTS',34,102,10,colors.muted,700);text('Materials',34,129,21,colors.text,750);roundRect(34,145,194,34,6,'#0e121a',colors.line);text('⌕  Find a material…',45,167,12,colors.muted);
+    let tabs=['All','Powders','Explosives','Liquids','Energy','Nature','Life','Solids','Electrical'],tx=34;
+    for(const tab of tabs){const tw=tab.length*6+17;roundRect(tx,191,tw,25,4,tx===34?'#29351c':'#1a1e28',null);text(tab,tx+8,208,9,tx===34?colors.lime:colors.muted,600);tx+=tw+5;if(tx>226)break}
+    const mats=stage===2?['Copper','Battery','Light','Magnet','Glowstone','Metal']:stage===1?['Water','Lava','Obsidian','Steam','Sand','Fire']:['Sand','Water','Quicksand','Coal','Wood','Oil'];
+    mats.forEach((m,k)=>{let y=231+k*60;roundRect(32,y,197,49,6,'#171b25',k===0?'#617541':colors.line);ctx.fillStyle=({Sand:colors.sand,Water:colors.water,Quicksand:'#bd9258',Coal:'#454852',Wood:'#9d653d',Oil:'#aa873e',Lava:colors.lava,Obsidian:'#77658f',Steam:'#bfcbd4',Fire:'#ff794b',Copper:colors.copper,Battery:'#b9d958',Light:'#ffe28a',Magnet:'#e36872',Glowstone:'#70cbb5',Metal:'#abb5c5'})[m]||colors.lime;ctx.beginPath();ctx.arc(49,y+24,9,0,Math.PI*2);ctx.fill();text(m,68,y+28,13,colors.text,650);text(k===0?'ELEMENT':'MATERIAL',68,y+41,8,colors.muted,500)});
+    roundRect(258,76,746,626,9,'#11151e',colors.line);roundRect(1018,76,244,626,9,colors.panel,colors.line);
+    text('UNTITLED WORLD',279,101,10,colors.muted,700);text(stage===0?'Gravity & flowing materials':stage===1?'Material reactions': 'Electrical circuits',279,128,18,colors.text,750);
+    roundRect(278,148,706,520,5,'#090c12','#252b38');
+    // Subtle square grid mirrors the simulator's pixel canvas.
+    ctx.save();ctx.beginPath();ctx.rect(279,149,704,518);ctx.clip();ctx.strokeStyle='#171c27';ctx.lineWidth=1;
+    for(let x=286;x<984;x+=14){ctx.beginPath();ctx.moveTo(x,149);ctx.lineTo(x,667);ctx.stroke()}for(let y=156;y<667;y+=14){ctx.beginPath();ctx.moveTo(279,y);ctx.lineTo(983,y);ctx.stroke()}ctx.restore();
+    text(stage===0?'SAND + WATER':stage===1?'LAVA + WATER → OBSIDIAN + STEAM':'BATTERY → COPPER → LIGHT',300,185,10,stage===0?colors.sand:stage===1?colors.lava:'#d9ed84',750);
+    text('TOOLS',1036,103,10,colors.muted,700);['Brush','Line','Rectangle','Fill','Pick','Erase','Heat','Cool'].forEach((v,k)=>{let x=1036+(k%2)*106,y=121+Math.floor(k/2)*38;roundRect(x,y,96,29,5,k===0?'#29351c':'#191e28',null);text(v,x+12,y+19,11,k===0?colors.lime:'#afb6c2',600)});
+    text('ENVIRONMENT',1036,303,10,colors.muted,700);text('Atmosphere',1037,331,13,colors.text,650);text('Gravity',1037,370,11,colors.muted);roundRect(1037,379,205,5,3,'#2a303c');roundRect(1037,379,stage===0?145:115,5,3,colors.lime);text('Wind',1037,420,11,colors.muted);roundRect(1037,429,205,5,3,'#2a303c');roundRect(1114,429,36,5,3,'#8893a1');text('Weather',1037,470,11,colors.muted);roundRect(1036,480,206,33,5,'#191e28',colors.line);text(stage===0?'☀ Clear skies':'〰 Windstorm',1048,501,11,colors.text,500);
+    text('WORLD STATISTICS',1036,553,10,colors.muted,700);roundRect(1036,565,98,66,6,'#171b25',colors.line);roundRect(1143,565,99,66,6,'#171b25',colors.line);text('PARTICLES',1047,585,8,colors.muted,700);text('1,284',1047,607,19,colors.text,750);text('TEMP',1154,585,8,colors.muted,700);text(stage===1?'680°C':'22°C',1154,607,18,colors.text,750);
+    roundRect(279,677,705,15,5,'#171b25');text('◀   PLAY     STEP     −     SPEED     +',292,689,8,colors.muted,600);
+  }
+  function drawPhysics(stage,t){
+    const left=279,top=149,right=983,bottom=667;ctx.save();ctx.beginPath();ctx.rect(left,top,right-left,bottom-top);ctx.clip();
+    // Stone-lined basin.
+    ctx.fillStyle='#4c5360';ctx.fillRect(left+8,bottom-24,690,24);ctx.fillRect(left+8,top+190,16,300);ctx.fillRect(left+682,top+185,16,305);
+    if(stage===0){
+      ctx.fillStyle=colors.water;const waterY=bottom-93+Math.sin(t*2)*2;ctx.fillRect(left+28,waterY,640,bottom-waterY-24);
+      for(let x=left+31;x<left+666;x+=12){const y=waterY+Math.sin(t*3+x*.04)*3;ctx.fillStyle=x%3?'#54b8e8':'#93e5ff';ctx.fillRect(x,y,9,3)}
+      // Sand falling and the mound grows in layers.
+      for(let row=0;row<17;row++){let width=42+row*26,yy=bottom-117-row*7;for(let x=left+310-width/2;x<left+310+width/2;x+=7){ctx.fillStyle=row%4===0?'#d7b772':colors.sand;ctx.fillRect(x+Math.sin(x*.2+row)*2,yy,5,5)}}
+      for(let k=0;k<45;k++){let x=left+255+((k*61)%170)+Math.sin(t*2+k)*4;let y=top+15+((t*80+k*37)%265);ctx.fillStyle=colors.sand;ctx.fillRect(x,y,4,4)}
+      text('POWDER FALL + FLUID FLOW',left+23,top+36,11,'#fff1cb',800);
+    } else if(stage===1){
+      // Blue pool, falling molten stream and a steamy contact plume.
+      const waterY=bottom-104;ctx.fillStyle=colors.water;ctx.fillRect(left+26,waterY,644,80);
+      for(let x=left+30;x<left+665;x+=12)ctx.fillRect(x,waterY+Math.sin(x*.09+t*3)*3,9,3);
+      ctx.fillStyle=colors.lava;ctx.beginPath();ctx.moveTo(left+505,top+16);ctx.bezierCurveTo(left+520,top+110,left+490,top+190,left+515,waterY+12);ctx.lineTo(left+541,waterY+12);ctx.bezierCurveTo(left+528,top+190,left+552,top+110,left+539,top+16);ctx.closePath();ctx.fill();
+      for(let row=0;row<5;row++)for(let x=left+445+row*12;x<left+572-row*12;x+=11){ctx.fillStyle=['#40384b','#57496a','#675779'][row%3];ctx.fillRect(x,bottom-24-row*8,9,7)}
+      for(let k=0;k<42;k++){let x=left+519+Math.sin(t*2.2+k*2)*((k%9)+3),y=waterY-8-((t*42+k*21)%135);ctx.globalAlpha=.65-(y<top+25?.3:0);ctx.fillStyle=k%3?'#d3e4ef':'#fff3c1';ctx.beginPath();ctx.arc(x,y,2+(k%3),0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+      for(let k=0;k<22;k++){let x=left+520+Math.cos(t*5+k)*((k%10)+4),y=waterY+rand(19)-4;glow(x,y,2,colors.lava,.8)}
+      text('HEAT TRANSFORMS MATTER',left+23,top+36,11,'#ffe2c2',800);
+    } else {
+      // Circuit built from battery, copper cells and glowing light cells.
+      const by=top+285,bx=left+92;roundRect(bx,by-44,92,90,8,'#293322','#9fb452');text('BATTERY',bx+13,by-20,10,'#e9ffab',800);text('POWER',bx+20,by+15,10,'#c9f36a',700);text('+',bx+68,by-30,15,'#f3ffd6',800);text('−',bx+69,by+38,15,'#f3ffd6',800);
+      ctx.strokeStyle=colors.copper;ctx.lineWidth=9;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(bx+92,by-23);ctx.lineTo(left+390,by-23);ctx.lineTo(left+390,by+47);ctx.lineTo(left+524,by+47);ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle='#ffd5b2';ctx.stroke();
+      let pulse=.72+.22*Math.sin(t*4);glow(left+578,by+47,62,'#ffd65e',.13*pulse);glow(left+578,by+47,33,'#ffd65e',.25*pulse);
+      ctx.fillStyle='#ffe18a';ctx.beginPath();ctx.arc(left+578,by+47,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff7d2';ctx.beginPath();ctx.arc(left+578,by+47,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='#7c8791';ctx.fillRect(left+569,by+67,18,14);ctx.fillRect(left+565,by+80,26,7);
+      ctx.fillStyle='#d8e889';ctx.font='700 12px system-ui';ctx.fillText('POWERED LIGHT',left+515,by+116);
+      for(let k=0;k<18;k++){let a=k*Math.PI/9+t*.35;let r=36+(k%3)*5;ctx.globalAlpha=.3+.5*Math.abs(Math.sin(t*3+k));ctx.fillStyle='#fff2a3';ctx.fillRect(left+578+Math.cos(a)*r,by+47+Math.sin(a)*r,3,3)}ctx.globalAlpha=1;
+      text('CONNECT BATTERY + COPPER + LIGHT',left+23,top+36,11,'#f4f7c7',800);
+    }
+    // Small live particle highlights across chapters.
+    ctx.restore();
+  }
+  function draw(){let t=(performance.now()-startTime)/1000,stage=Math.min(2,Math.floor(t/6));drawShell(stage,t);drawPhysics(stage,t);text('A tiny world with big reactions.',846,685,10,colors.muted,500);}
+  function saveImage(name){return new Promise(resolve=>canvas.toBlob(async blob=>{try{const r=await fetch('/__capture/'+name,{method:'POST',body:blob});resolve(r.ok)}catch{resolve(false)}},'image/png'))}
+  function tick(){draw();let t=(performance.now()-startTime)/1000;for(const [at,name] of [[3,'overview.png'],[9,'reactions.png'],[15,'circuits.png']])if(t>=at&&!saved.has(name)){saved.add(name);saveImage(name)}requestAnimationFrame(tick)}
+  tick();
+  async function beginRecording(){
+    if(recording)return;recording=true;startTime=performance.now();saved.clear();chunks=[];
+    try{
+      const stream=canvas.captureStream(30),mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2400000});
+      recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+      recorder.onerror=()=>{status.textContent='The browser could not encode this demo video.';recording=false;stream.getTracks().forEach(x=>x.stop())};
+      recorder.onstop=async()=>{const blob=new Blob(chunks,{type:'video/webm'});try{const r=await fetch('/__capture/sandfall-lab-demo.webm',{method:'POST',body:blob});status.textContent=r.ok?'Saved video and preview images in media/.':'Video save failed. Check the local capture server.'}catch{status.textContent='Could not save the video. Keep this page open and try again.'}stream.getTracks().forEach(x=>x.stop());recording=false};
+      recorder.start(500);status.textContent='Recording the material showcase…';setTimeout(()=>{if(recorder?.state==='recording')recorder.stop()},19000);
+    }catch(error){status.textContent=`Video capture failed: ${error.message}`;recording=false;}
+  }
+  document.querySelector('#record').addEventListener('click',beginRecording);
+  setTimeout(beginRecording,1200);
+})();
+</script>
+</html>

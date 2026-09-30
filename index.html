@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b0d14" />
+  <title>Sandfall Lab v2 — Matter Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Sandfall Lab v2 home"><span class="brand-mark">◈</span><span>Sandfall Lab v2</span><span class="brand-divider"></span><span class="brand-sub">MATTER PLAYGROUND</span></a>
+      <div class="top-status"><span class="live-dot"></span><span id="simStatus">SIMULATION LIVE</span><span class="status-divider"></span><span id="fpsReadout">60 FPS</span></div>
+      <div class="top-actions">
+        <button class="icon-btn" id="helpBtn" title="How to play" aria-label="How to play">?</button>
+        <button class="icon-btn" id="soundBtn" title="Toggle sound" aria-label="Toggle sound">♫</button>
+        <button class="load-btn" id="loadBtn" title="Load a saved world"><span>↑</span> LOAD</button><button class="save-btn" id="saveBtn"><span>↓</span> SAVE WORLD</button><input id="loadFile" type="file" accept="application/json,.json" hidden />
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="materials-panel panel">
+        <div class="panel-heading"><div><div class="eyebrow">YOUR ELEMENTS</div><h1>Materials <span id="materialCount">18</span></h1></div><button class="collapse-btn" title="Materials">⌄</button></div>
+        <div class="search-wrap"><span>⌕</span><input id="materialSearch" placeholder="Find a material..." autocomplete="off" /><kbd>/</kbd></div>
+        <div class="category-tabs" id="categoryTabs" tabindex="0" aria-label="Scrollable material categories"></div>
+        <div class="material-list" id="materialList"></div>
+        <div class="material-tip"><span class="tip-icon">✳</span><span><b>Mix things up.</b><br />Some of the best reactions are happy accidents.</span></div>
+      </aside>
+
+      <section class="stage-column">
+        <div class="stage-toolbar">
+          <div class="world-label"><span class="world-icon">▦</span><div><b>Untitled world</b><small id="worldSeed">WORLD 001 · SANDBOX</small></div></div>
+          <div class="stage-actions">
+            <button class="tool-btn selected" data-tool="brush" title="Brush (B)"><span>✎</span><small>BRUSH</small></button>
+            <button class="tool-btn" data-tool="line" title="Line (L)"><span>╱</span><small>LINE</small></button>
+            <button class="tool-btn" data-tool="rect" title="Rectangle (R)"><span>▱</span><small>SHAPE</small></button>
+            <button class="tool-btn" data-tool="bucket" title="Fill (F)"><span>◩</span><small>FILL</small></button>
+            <button class="tool-btn" data-tool="pick" title="Eyedropper (I)"><span>⌖</span><small>PICK</small></button>
+            <button class="tool-btn" data-tool="erase" title="Eraser (E)"><span>⌫</span><small>ERASE</small></button>
+            <button class="tool-btn" data-tool="heat" title="Heater (H)"><span>♨</span><small>HEAT</small></button>
+            <button class="tool-btn" data-tool="cool" title="Cooler (C)"><span>❄</span><small>COOL</small></button>
+          </div>
+          <div class="stage-utility"><button class="icon-btn subtle" id="undoBtn" title="Undo (Ctrl+Z)">↶</button><button class="icon-btn subtle" id="redoBtn" title="Redo (Ctrl+Y)">↷</button><span class="utility-divider"></span><button class="icon-btn subtle" id="gridBtn" title="Toggle grid">▦</button><button class="icon-btn subtle" id="fullscreenBtn" title="Fullscreen">⛶</button></div>
+        </div>
+
+        <div class="canvas-frame" id="canvasFrame">
+          <div class="canvas-topline"><span><i class="live-dot"></i> <b>LIVE SIMULATION</b></span><span id="coords">X: — &nbsp; Y: —</span></div>
+          <canvas id="world" aria-label="Interactive physics sandbox"></canvas>
+          <canvas id="fx"></canvas>
+          <div class="canvas-hint" id="canvasHint"><span class="hint-spark">✦</span><b>Your world is empty</b><span>Pick a material, then click or drag to add it.</span><button id="dismissHint">GOT IT <span>→</span></button></div>
+          <div class="zoom-control"><button id="zoomOut" aria-label="Zoom out">−</button><span id="zoomLabel">100%</span><button id="zoomIn" aria-label="Zoom in">+</button><span class="zoom-sep"></span><button id="fitBtn" aria-label="Fit to screen">⌗</button></div>
+          <div class="canvas-corner">☼ <span>DAYLIGHT</span></div>
+        </div>
+
+        <div class="timeline panel">
+          <div class="timeline-main">
+            <button class="play-btn" id="playBtn" title="Pause simulation (Space)">Ⅱ</button>
+            <button class="step-btn" id="stepBtn" title="Step one frame">▸│</button>
+            <span class="timeline-divider"></span>
+            <div class="time-meta"><b id="timeDisplay">00:00</b><small>ELAPSED</small></div>
+            <div class="timeline-track"><div class="timeline-progress" id="timelineProgress"></div><span class="timeline-tick"></span></div>
+            <span class="speed-label">SPEED</span><button class="speed-btn active" data-speed="1">1×</button><button class="speed-btn" data-speed="2">2×</button><button class="speed-btn" data-speed="4">4×</button>
+          </div>
+          <div class="timeline-right"><span class="particle-indicator"><i></i><b id="particleCount">0</b> PARTICLES</span><button class="clear-btn" id="clearBtn"><span>⌧</span> CLEAR WORLD</button></div>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="selected-material"><span class="material-swatch" id="selectedSwatch"></span><div><small>SELECTED MATERIAL</small><b id="selectedName">Sand</b></div></div>
+          <div class="brush-control"><label for="brushSize">BRUSH SIZE</label><input type="range" id="brushSize" min="1" max="18" value="5" /><span id="brushValue">5</span></div>
+          <div class="brush-control density-control"><label for="density">DENSITY</label><input type="range" id="density" min="1" max="100" value="72" /><span id="densityValue">72%</span></div>
+          <button class="option-chip active" id="glowBtn"><span>✧</span> GLOW</button>
+          <button class="option-chip active" id="trailsBtn"><span>〰</span> TRAILS</button>
+        </div>
+      </section>
+
+      <aside class="inspector-panel panel">
+        <div class="panel-heading inspector-heading"><div><div class="eyebrow">WORLD SETTINGS</div><h2>Environment</h2></div><span class="settings-icon">⚙</span></div>
+        <div class="environment-card"><div class="env-heading"><span class="env-icon">☀</span><div><b>Atmosphere</b><small>Clear skies</small></div><span class="toggle on" id="atmosphereToggle"><i></i></span></div><div class="env-separator"></div><label class="setting-label">GRAVITY <span id="gravityValue">1.0×</span></label><input type="range" id="gravity" min="0" max="200" value="100" /><div class="range-ends"><span>MOON</span><span>EARTH</span><span>JUPITER</span></div><label class="setting-label wind-label">WIND <span id="windValue">0%</span></label><input type="range" id="wind" min="-100" max="100" value="0" /><div class="wind-ends"><span>←</span><span>STILL</span><span>→</span></div><label class="setting-label weather-label" for="weatherMode">WEATHER <span id="weatherCaption">Clear</span></label><select id="weatherMode" class="weather-select"><option value="clear">☀ Clear skies</option><option value="rain">☂ Rain</option><option value="snow">❄ Snowfall</option><option value="storm">〰 Windstorm</option><option value="heatwave">♨ Heatwave</option><option value="meteor">✦ Meteor shower</option></select></div>
+
+        <div class="inspector-section"><div class="section-title">WORLD STATISTICS <span class="live-pill">LIVE</span></div><div class="stats-grid"><div class="stat-box"><span>PARTICLES</span><b id="statParticles">0</b><small>in your world</small></div><div class="stat-box"><span>TEMPERATURE</span><b><span id="statTemp">22</span><i>°C</i></b><small>average ambient</small></div></div></div>
+
+        <div class="inspector-section reactions-section"><div class="section-title">DISCOVER REACTIONS <span>↗</span></div><div class="reaction-row"><span class="reaction-dot dot-water">●</span><span>Water</span><span class="reaction-plus">+</span><span class="reaction-dot dot-fire">●</span><span>Fire</span><span class="reaction-arrow">→</span><span class="reaction-result">Steam</span></div><div class="reaction-row"><span class="reaction-dot dot-sand">●</span><span>Sand</span><span class="reaction-plus">+</span><span class="reaction-dot dot-fire">●</span><span>Lava</span><span class="reaction-arrow">→</span><span class="reaction-result">Glass</span></div><div class="reaction-row"><span class="reaction-dot dot-water">●</span><span>Water</span><span class="reaction-plus">+</span><span class="reaction-dot dot-sand">●</span><span>Sand</span><span class="reaction-arrow">→</span><span class="reaction-result">Mud</span></div><div class="reaction-row"><span class="reaction-dot dot-fire">●</span><span>Lava</span><span class="reaction-plus">+</span><span class="reaction-dot dot-sand">●</span><span>Gunpowder</span><span class="reaction-arrow">→</span><span class="reaction-result">Blast</span></div><button class="discover-btn" id="reactionsBtn">EXPLORE ALL REACTIONS <span>→</span></button></div>
+
+        <div class="quick-actions"><button id="randomBtn"><span>⤨</span><div><b>Surprise me</b><small>Make something random</small></div><kbd>M</kbd></button><button id="rainBtn"><span>☂</span><div><b>Rain on it</b><small>Let it pour</small></div><kbd>⏎</kbd></button></div>
+        <div class="inspector-footer"><span class="keyboard-icon">⌨</span><span>SHORTCUTS</span><button id="shortcutsBtn">VIEW ALL <span>→</span></button></div>
+      </aside>
+    </main>
+    <div class="toast" id="toast"></div>
+  </div>
+  <div class="modal-backdrop" id="modalBackdrop"><div class="modal panel"><button class="modal-close" id="modalClose">×</button><div class="eyebrow" id="modalEyebrow">A LITTLE GUIDE</div><h2 id="modalTitle">Make a little mess.</h2><div id="modalContent"></div></div></div>
+  <script src="app.js"></script>
+</body>
+</html>
