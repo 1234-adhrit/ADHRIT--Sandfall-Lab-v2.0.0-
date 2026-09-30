@@ -95,3 +95,7 @@ Keyboard shortcuts include **B** brush, **L** line, **R** rectangle, **F** fill,
 - `app.js` — material definitions, cell simulation, reactions, tools, rendering, and world save/load.
 - `media/` — README screenshots and the demo video.
 - `media/generate-media.html` and `tools/capture-server.cjs` — local preview media generator and its save endpoint.
+
+## Play Online
+
+- https://adhrit-sandfall-lab-v2-0-0.onrender.com
